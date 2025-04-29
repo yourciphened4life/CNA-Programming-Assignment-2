@@ -20,3 +20,18 @@ Reliable Transport with Selective Repeat Programming
   * All ACKs received correctly and window advanced as expected.
   * No resends occurred.
   * All 5 messages delivered successfully to the application layer.
+
+
+# STEP - 2 
+
+- Updated `WINDOWSIZE` to SEQSPACE / 2 for Selective Repeat compliance.
+- Added `IsSeqNumInWindow()` utility function to handle window wraparound logic.
+- Ensured `A_output()` correctly halts transmission when the send window is full.
+- Updated buffer and ACK tracking to index by SEQSPACE for wraparound support.
+- Resend logic in `A_timerinterrupt()` now checks window boundaries properly.
+- Verified correctness with test: sent 10 messages, 3 accepted (window = 3), 7 dropped due to full window.
+- All ACKs handled and window slid forward as expected.
+- Verified correctness through test cases:
+  * Messages correctly blocked when window full
+  * Window advanced after ACKs
+  * No crashes or logic errors with wraparound
