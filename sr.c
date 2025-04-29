@@ -5,8 +5,8 @@
 #include "sr.h"
 
 #define RTT  16.0       /* Round trip time (must be set to 16.0) */
-#define WINDOWSIZE 6    /* Maximum number of unacked packets allowed in the window */
-#define SEQSPACE 7      /* Sequence number space must be >= WINDOWSIZE + 1 */
+#define SEQSPACE 7       /* Sequence number space */
+#define WINDOWSIZE (SEQSPACE / 2)  /* Max SR window size is half the sequence space */
 #define NOTINUSE (-1)   /* Used for unused ack/seq fields */
 
 /* Compute checksum used by both sender and receiver */
@@ -22,11 +22,17 @@ bool IsCorrupted(struct pkt packet) {
   return packet.checksum != ComputeChecksum(packet);
 }
 
+/* Utility function: check if a seqnum is within the sender window */
+bool IsSeqNumInWindow(int base, int seqnum) {
+  return ((seqnum >= base && seqnum < base + WINDOWSIZE) ||
+          (base + WINDOWSIZE >= SEQSPACE && (seqnum < (base + WINDOWSIZE) % SEQSPACE)));
+}
+
 /********* Sender (A) ************/
 
-static struct pkt buffer[WINDOWSIZE];
-static bool acked[SEQSPACE];             /* Tracks ACK status per sequence number */
-static int windowfirst, windowlast;
+static struct pkt buffer[SEQSPACE];
+static bool acked[SEQSPACE];
+static int windowfirst;
 static int windowcount;
 static int A_nextseqnum;
 
@@ -36,7 +42,7 @@ void A_output(struct msg message) {
 
   if (windowcount < WINDOWSIZE) {
     if (TRACE > 1)
-      printf("----A: New message arrives, send window is not full, send new messge to layer3!\n");
+      printf("----A: New message arrives, send window is not full, send new message to layer3!\n");
 
     sendpkt.seqnum = A_nextseqnum;
     sendpkt.acknum = NOTINUSE;
@@ -44,9 +50,8 @@ void A_output(struct msg message) {
       sendpkt.payload[i] = message.data[i];
     sendpkt.checksum = ComputeChecksum(sendpkt);
 
-    windowlast = (windowlast + 1) % WINDOWSIZE; 
-    buffer[windowlast] = sendpkt;
-    acked[sendpkt.seqnum] = false;  /* Mark packet as unACKed */
+    buffer[A_nextseqnum] = sendpkt;
+    acked[A_nextseqnum] = false;
     windowcount++;
 
     if (TRACE > 0)
@@ -70,7 +75,6 @@ void A_input(struct pkt packet) {
       printf("----A: uncorrupted ACK %d is received\n", packet.acknum);
     total_ACKs_received++;
 
-    /* Begin: Selective Repeat ACK handling */
     if (!acked[packet.acknum]) {
       if (TRACE > 0)
         printf("----A: ACK %d is not a duplicate\n", packet.acknum);
@@ -78,8 +82,8 @@ void A_input(struct pkt packet) {
       new_ACKs++;
 
       stoptimer(A);
-      while (windowcount > 0 && acked[buffer[windowfirst].seqnum]) {
-        windowfirst = (windowfirst + 1) % WINDOWSIZE;
+      while (windowcount > 0 && acked[windowfirst]) {
+        windowfirst = (windowfirst + 1) % SEQSPACE;
         windowcount--;
       }
       if (windowcount > 0)
@@ -88,8 +92,6 @@ void A_input(struct pkt packet) {
       if (TRACE > 0)
         printf("----A: duplicate ACK received, do nothing!\n");
     }
-    /* End: Selective Repeat ACK handling */
-
   } else {
     if (TRACE > 0)
       printf("----A: corrupted ACK is received, do nothing!\n");
@@ -100,31 +102,29 @@ void A_timerinterrupt(void) {
   int i;
 
   if (TRACE > 0)
-    printf("----A: time out,resend packets!\n");
+    printf("----A: time out, resend unACKed packets!\n");
 
-  /* Begin: Selective Repeat resend logic */
-  for (i = 0; i < windowcount; i++) {
-    int index = (windowfirst + i) % WINDOWSIZE;
-    if (!acked[buffer[index].seqnum]) {
+  for (i = 0; i < SEQSPACE; i++) {
+    if (!acked[i] && IsSeqNumInWindow(windowfirst, i)) {
       if (TRACE > 0)
-        printf("---A: resending packet %d\n", buffer[index].seqnum);
-      tolayer3(A, buffer[index]);
+        printf("---A: resending packet %d\n", buffer[i].seqnum);
+      tolayer3(A, buffer[i]);
       packets_resent++;
     }
-    if (i == 0)
-      starttimer(A, RTT);
   }
-  /* End: Selective Repeat resend logic */
+
+  if (windowcount > 0)
+    starttimer(A, RTT);
 }
 
 void A_init(void) {
   int i;
   A_nextseqnum = 0;
   windowfirst = 0;
-  windowlast = -1;
   windowcount = 0;
-  for (i = 0; i < SEQSPACE; i++)  /* Initialize all ack flags */
+  for (i = 0; i < SEQSPACE; i++) {
     acked[i] = false;
+  }
 }
 
 /********* Receiver (B) ************/
@@ -165,3 +165,4 @@ void B_init(void) {
 
 void B_output(struct msg message) {}
 void B_timerinterrupt(void) {}
+
