@@ -4,12 +4,11 @@
 #include "emulator.h"
 #include "sr.h"
 
-#define RTT  16.0       /* Round trip time (must be set to 16.0) */
-#define SEQSPACE 7       /* Sequence number space */
-#define WINDOWSIZE (SEQSPACE / 2)  /* Max SR window size is half the sequence space */
-#define NOTINUSE (-1)   /* Used for unused ack/seq fields */
+#define RTT  16.0
+#define SEQSPACE 7
+#define WINDOWSIZE (SEQSPACE / 2)
+#define NOTINUSE (-1)
 
-/* Compute checksum used by both sender and receiver */
 int ComputeChecksum(struct pkt packet) {
   int checksum = packet.seqnum + packet.acknum;
   int i;
@@ -22,13 +21,10 @@ bool IsCorrupted(struct pkt packet) {
   return packet.checksum != ComputeChecksum(packet);
 }
 
-/* Utility function: check if a seqnum is within the sender window */
 bool IsSeqNumInWindow(int base, int seqnum) {
   return ((seqnum >= base && seqnum < base + WINDOWSIZE) ||
           (base + WINDOWSIZE >= SEQSPACE && (seqnum < (base + WINDOWSIZE) % SEQSPACE)));
 }
-
-/********* Sender (A) ************/
 
 static struct pkt buffer[SEQSPACE];
 static bool acked[SEQSPACE];
@@ -42,7 +38,7 @@ void A_output(struct msg message) {
 
   if (windowcount < WINDOWSIZE) {
     if (TRACE > 1)
-      printf("----A: New message arrives, send window is not full, send new message to layer3!\n");
+      printf("----A: New message arrives, send window is not full, send new messge to layer3!\n");
 
     sendpkt.seqnum = A_nextseqnum;
     sendpkt.acknum = NOTINUSE;
@@ -102,7 +98,7 @@ void A_timerinterrupt(void) {
   int i;
 
   if (TRACE > 0)
-    printf("----A: time out, resend unACKed packets!\n");
+    printf("----A: time out,resend packets!\n");
 
   for (i = 0; i < SEQSPACE; i++) {
     if (!acked[i] && IsSeqNumInWindow(windowfirst, i)) {
@@ -126,8 +122,6 @@ void A_init(void) {
     acked[i] = false;
   }
 }
-
-/********* Receiver (B) ************/
 
 static int expectedseqnum;
 static int B_nextseqnum;
