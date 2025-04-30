@@ -11,7 +11,8 @@
 
 int ComputeChecksum(struct pkt packet) {
   int checksum = packet.seqnum + packet.acknum;
-  for (int i = 0; i < 20; i++)
+  int i;
+  for (i = 0; i < 20; i++)
     checksum += (int)(packet.payload[i]);
   return checksum;
 }
@@ -33,6 +34,7 @@ static int A_nextseqnum;
 
 void A_output(struct msg message) {
   struct pkt sendpkt;
+  int i;
 
   if (windowcount < WINDOWSIZE) {
     if (TRACE > 1)
@@ -40,7 +42,7 @@ void A_output(struct msg message) {
 
     sendpkt.seqnum = A_nextseqnum;
     sendpkt.acknum = NOTINUSE;
-    for (int i = 0; i < 20; i++)
+    for (i = 0; i < 20; i++)
       sendpkt.payload[i] = message.data[i];
     sendpkt.checksum = ComputeChecksum(sendpkt);
 
@@ -93,10 +95,11 @@ void A_input(struct pkt packet) {
 }
 
 void A_timerinterrupt(void) {
+  int i;
   if (TRACE > 0)
     printf("----A: time out,resend packets!\n");
 
-  for (int i = 0; i < SEQSPACE; i++) {
+  for (i = 0; i < SEQSPACE; i++) {
     if (!acked[i] && IsSeqNumInWindow(windowfirst, i)) {
       if (TRACE > 0)
         printf("---A: resending packet %d\n", buffer[i].seqnum);
@@ -110,10 +113,11 @@ void A_timerinterrupt(void) {
 }
 
 void A_init(void) {
+  int i;
   A_nextseqnum = 0;
   windowfirst = 0;
   windowcount = 0;
-  for (int i = 0; i < SEQSPACE; i++)
+  for (i = 0; i < SEQSPACE; i++)
     acked[i] = false;
 }
 
@@ -144,12 +148,15 @@ void B_input(struct pkt packet) {
       if (TRACE > 0)
         printf("----B: duplicate packet received, send ACK!\n");
     }
+
+    sendpkt.acknum = index; /* ACK the new or duplicate packet */
   } else {
     if (TRACE > 0)
-      printf("----B: corrupted or out-of-window packet received, resend last ACK!\n");
+      printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
+
+    sendpkt.acknum = (expectedseqnum == 0) ? SEQSPACE - 1 : expectedseqnum - 1;
   }
 
-  sendpkt.acknum = index;
   sendpkt.seqnum = B_nextseqnum;
   B_nextseqnum = (B_nextseqnum + 1) % 2;
   for (i = 0; i < 20; i++)
@@ -159,9 +166,10 @@ void B_input(struct pkt packet) {
 }
 
 void B_init(void) {
+  int i;
   expectedseqnum = 0;
   B_nextseqnum = 1;
-  for (int i = 0; i < SEQSPACE; i++)
+  for (i = 0; i < SEQSPACE; i++)
     B_received[i] = false;
 }
 
