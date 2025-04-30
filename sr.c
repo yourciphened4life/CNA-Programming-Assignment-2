@@ -6,7 +6,7 @@
 
 #define RTT  16.0
 #define SEQSPACE 7
-#define WINDOWSIZE (SEQSPACE / 2)
+#define WINDOWSIZE 6
 #define NOTINUSE (-1)
 
 int ComputeChecksum(struct pkt packet) {
@@ -159,4 +159,3 @@ void B_init(void) {
 
 void B_output(struct msg message) {}
 void B_timerinterrupt(void) {}
-
