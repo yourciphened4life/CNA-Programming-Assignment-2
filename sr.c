@@ -11,8 +11,7 @@
 
 int ComputeChecksum(struct pkt packet) {
   int checksum = packet.seqnum + packet.acknum;
-  int i;
-  for (i = 0; i < 20; i++)
+  for (int i = 0; i < 20; i++)
     checksum += (int)(packet.payload[i]);
   return checksum;
 }
@@ -34,15 +33,14 @@ static int A_nextseqnum;
 
 void A_output(struct msg message) {
   struct pkt sendpkt;
-  int i;
 
   if (windowcount < WINDOWSIZE) {
     if (TRACE > 1)
-      printf("----A: New message arrives, send window is not full, send new message to layer3!\n");
+      printf("----A: New message arrives, send window is not full, send new messge to layer3!\n");
 
     sendpkt.seqnum = A_nextseqnum;
     sendpkt.acknum = NOTINUSE;
-    for (i = 0; i < 20; i++)
+    for (int i = 0; i < 20; i++)
       sendpkt.payload[i] = message.data[i];
     sendpkt.checksum = ComputeChecksum(sendpkt);
 
@@ -95,11 +93,10 @@ void A_input(struct pkt packet) {
 }
 
 void A_timerinterrupt(void) {
-  int i;
   if (TRACE > 0)
-    printf("----A: time out, resend packets!\n");
+    printf("----A: time out,resend packets!\n");
 
-  for (i = 0; i < SEQSPACE; i++) {
+  for (int i = 0; i < SEQSPACE; i++) {
     if (!acked[i] && IsSeqNumInWindow(windowfirst, i)) {
       if (TRACE > 0)
         printf("---A: resending packet %d\n", buffer[i].seqnum);
@@ -113,11 +110,10 @@ void A_timerinterrupt(void) {
 }
 
 void A_init(void) {
-  int i;
   A_nextseqnum = 0;
   windowfirst = 0;
   windowcount = 0;
-  for (i = 0; i < SEQSPACE; i++)
+  for (int i = 0; i < SEQSPACE; i++)
     acked[i] = false;
 }
 
@@ -137,7 +133,7 @@ void B_input(struct pkt packet) {
       packets_received++;
 
       if (TRACE > 0)
-        printf("----B: buffered packet %d\n", index);
+        printf("----B: packet %d is correctly received, send ACK!\n", index);
 
       while (B_received[expectedseqnum]) {
         tolayer5(B, B_buffer[expectedseqnum].payload);
@@ -146,11 +142,11 @@ void B_input(struct pkt packet) {
       }
     } else {
       if (TRACE > 0)
-        printf("----B: duplicate packet %d received\n", index);
+        printf("----B: duplicate packet received, send ACK!\n");
     }
   } else {
     if (TRACE > 0)
-      printf("----B: corrupted or out-of-window packet received\n");
+      printf("----B: corrupted or out-of-window packet received, resend last ACK!\n");
   }
 
   sendpkt.acknum = index;
@@ -163,10 +159,9 @@ void B_input(struct pkt packet) {
 }
 
 void B_init(void) {
-  int i;
   expectedseqnum = 0;
   B_nextseqnum = 1;
-  for (i = 0; i < SEQSPACE; i++)
+  for (int i = 0; i < SEQSPACE; i++)
     B_received[i] = false;
 }
 
