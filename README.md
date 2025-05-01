@@ -35,3 +35,18 @@ Reliable Transport with Selective Repeat Programming
   * Messages correctly blocked when window full
   * Window advanced after ACKs
   * No crashes or logic errors with wraparound
+
+
+#STEP - 3
+
+ - Enhanced duplicate packet detection at the receiver (B_input) by checking if B_received[seqnum] is already set before buffering.
+ - Ensured the receiver sends ACKs for duplicate packets without re-buffering or delivering them again.
+ - Kept ACK handling at the sender (A_input) robust:
+ - Duplicate ACKs are ignored and do not trigger timer or window updates.
+ - Corrupted ACKs are safely discarded with a trace message.
+ - Maintained full autograder TRACE output compliance and ensured C90 compatibility.
+ - Confirmed correct operation under:
+   * Out-of-order delivery
+   * Packet/ACK loss
+   * Packet/ACK corruption
+ - Verified through emulator simulation with message corruption/loss enabled.
