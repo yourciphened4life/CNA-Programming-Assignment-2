@@ -22,8 +22,7 @@ bool IsCorrupted(struct pkt packet) {
 }
 
 bool IsSeqNumInWindow(int base, int seqnum) {
-  return ((seqnum >= base && seqnum < base + WINDOWSIZE) ||
-          (base + WINDOWSIZE >= SEQSPACE && (seqnum < (base + WINDOWSIZE) % SEQSPACE)));
+  return ((seqnum - base + SEQSPACE) % SEQSPACE) < WINDOWSIZE;
 }
 
 static struct pkt buffer[SEQSPACE];
@@ -149,7 +148,7 @@ void B_input(struct pkt packet) {
         printf("----B: duplicate packet received, send ACK!\n");
     }
 
-    sendpkt.acknum = index; /* Send ACK for this packet */
+    sendpkt.acknum = index;
   } else {
     if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
