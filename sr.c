@@ -70,22 +70,27 @@ void A_input(struct pkt packet) {
       printf("----A: uncorrupted ACK %d is received\n", packet.acknum);
     total_ACKs_received++;
 
-    if (!acked[packet.acknum]) {
-      if (TRACE > 0)
-        printf("----A: ACK %d is not a duplicate\n", packet.acknum);
-      acked[packet.acknum] = true;
-      new_ACKs++;
+    if (IsSeqNumInWindow(windowfirst, packet.acknum)) {
+      if (!acked[packet.acknum]) {
+        if (TRACE > 0)
+          printf("----A: ACK %d is not a duplicate\n", packet.acknum);
+        acked[packet.acknum] = true;
+        new_ACKs++;
 
-      stoptimer(A);
-      while (windowcount > 0 && acked[windowfirst]) {
-        windowfirst = (windowfirst + 1) % SEQSPACE;
-        windowcount--;
+        stoptimer(A);
+        while (windowcount > 0 && acked[windowfirst]) {
+          windowfirst = (windowfirst + 1) % SEQSPACE;
+          windowcount--;
+        }
+        if (windowcount > 0)
+          starttimer(A, RTT);
+      } else {
+        if (TRACE > 0)
+          printf("----A: duplicate ACK received, do nothing!\n");
       }
-      if (windowcount > 0)
-        starttimer(A, RTT);
     } else {
       if (TRACE > 0)
-        printf("----A: duplicate ACK received, do nothing!\n");
+        printf("----A: received ACK %d, but not in window (ignored)\n", packet.acknum);
     }
   } else {
     if (TRACE > 0)
@@ -99,7 +104,7 @@ void A_timerinterrupt(void) {
     printf("----A: time out,resend packets!\n");
 
   for (i = 0; i < SEQSPACE; i++) {
-    if (!acked[i] && IsSeqNumInWindow(windowfirst, i)) {
+    if (IsSeqNumInWindow(windowfirst, i) && !acked[i]) {
       if (TRACE > 0)
         printf("---A: resending packet %d\n", buffer[i].seqnum);
       tolayer3(A, buffer[i]);
