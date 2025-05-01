@@ -37,7 +37,7 @@ Reliable Transport with Selective Repeat Programming
   * No crashes or logic errors with wraparound
 
 
-#STEP - 3
+# STEP - 3
 
  - Enhanced duplicate packet detection at the receiver (B_input) by checking if B_received[seqnum] is already set before buffering.
  - Ensured the receiver sends ACKs for duplicate packets without re-buffering or delivering them again.
@@ -50,3 +50,16 @@ Reliable Transport with Selective Repeat Programming
    * Packet/ACK loss
    * Packet/ACK corruption
  - Verified through emulator simulation with message corruption/loss enabled.
+
+# STEP - 4
+
+ - Refactored IsSeqNumInWindow() function to use modular arithmetic, ensuring correctness even when the sequence number space wraps around.
+ - Eliminated edge case failures near the sequence number boundary (e.g., base = 6, seqnum = 0).
+ - Simulated message loss and corruption in A<-B direction (ACKs), with window wrapping enabled due to limited sequence space (SEQSPACE = 7).
+ - Ran high-volume stress tests and confirmed:
+   * Correct delivery of in-order packets
+   * Accurate handling of lost/corrupted ACKs and retransmissions
+   * Proper window advancement under pressure
+   * Adherence to autograder-required TRACE output
+
+
