@@ -149,7 +149,7 @@ void B_input(struct pkt packet) {
         printf("----B: duplicate packet received, send ACK!\n");
     }
 
-    sendpkt.acknum = index; /* ACK the new or duplicate packet */
+    sendpkt.acknum = index; /* Send ACK for this packet */
   } else {
     if (TRACE > 0)
       printf("----B: packet corrupted or not expected sequence number, resend ACK!\n");
