@@ -63,3 +63,11 @@ Reliable Transport with Selective Repeat Programming
    * Adherence to autograder-required TRACE output
 
 
+# STEP - 5 
+
+ -  Expand sender buffer & ACK arrays to full sequence space
+ - Add helper to test if seq num is in sender window before indexing 
+ - Validate incoming ACKs against current window to avoid OOB access
+ - Retransmit *all* un-ACKed packets in window on timeout (not just first)
+ -  Initialize ACK‐tracking arrays properly 
+ - Mirror these fixes on the receiver to bound checks and correct buffering
